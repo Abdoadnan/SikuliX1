@@ -1,7 +1,3 @@
-/*
- * Copyright (c) 2010-2019, sikuli.org, sikulix.com - MIT license
- */
-
 //
 // This file is auto-generated. Please don't modify it!
 //
@@ -10,7 +6,6 @@ package org.opencv.objdetect;
 import org.opencv.core.Algorithm;
 
 // C++: class BaseCascadeClassifier
-//javadoc: BaseCascadeClassifier
 
 public class BaseCascadeClassifier extends Algorithm {
 
