@@ -126,9 +126,17 @@ public class RunTime {
     }
     cmd.addAll(Arrays.asList(args));
 
+    if (RunTime.isVerbose()) {
+      String msg = "";
+      for (String parm:cmd) {
+        msg += parm + " ";
+      }
+      RunTime.startLog(3, msg);
+    }
+
+    RunTime.startLog(3, "*********************** leaving start");
     if (shouldDetach()) {
       ProcessRunner.detach(cmd);
-      RunTime.startLog(3, "*********************** leaving start");
       System.exit(0);
     } else {
       int exitCode = ProcessRunner.runBlocking(cmd);
@@ -163,22 +171,22 @@ public class RunTime {
   }
 
   public static void afterStart(RunTime.Type type, String[] args) {
-
+    String startType = "IDE";
     if (Type.IDE.equals(type)) {
       if (null == System.getProperty("sikuli.IDE_should_run")) {
         System.out.println("[ERROR] org.sikuli.ide.SikulixIDE: unauthorized use. Use: org.sikuli.ide.Sikulix");
         System.exit(1);
       }
-      Debug.log(3, "Sikulix: starting IDE");
     } else {
       if (null == System.getProperty("sikuli.API_should_run")) {
         System.out.println("[ERROR] org.sikuli.script.SikulixAPI: unauthorized use. Use: org.sikuli.script.Sikulix");
         System.exit(1);
       }
-      Debug.log(3, "Sikulix: starting API");
+      startType = "API";
     }
 
     evalArgsStart(args);
+    Debug.log(3, "Sikulix: starting " + startType);
     evalArgs(args);
     ExtensionManager.readExtensions(true);
 
