@@ -126,14 +126,6 @@ public class RunTime {
     }
     cmd.addAll(Arrays.asList(args));
 
-    if (RunTime.isVerbose()) {
-      String msg = "";
-      for (String parm:cmd) {
-        msg += parm + " ";
-      }
-      RunTime.startLog(3, msg);
-    }
-
     RunTime.startLog(3, "*********************** leaving start");
     if (shouldDetach()) {
       ProcessRunner.detach(cmd);

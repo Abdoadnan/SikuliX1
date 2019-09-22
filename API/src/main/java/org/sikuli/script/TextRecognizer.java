@@ -3,25 +3,20 @@
  */
 package org.sikuli.script;
 
-import com.sun.jna.Platform;
 import net.sourceforge.tess4j.Tesseract1;
 import net.sourceforge.tess4j.TesseractException;
 import net.sourceforge.tess4j.util.ImageHelper;
-import net.sourceforge.tess4j.util.LoadLibs;
-import org.sikuli.basics.Debug;
-import org.sikuli.basics.FileManager;
-import org.sikuli.basics.Settings;
+import org.sikuli.basics.*;
 import org.sikuli.script.support.RunTime;
 
+import java.awt.Desktop;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.util.ArrayList;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Date;
 import java.util.List;
 
@@ -30,6 +25,9 @@ public class TextRecognizer {
   private static int lvl = 3;
 
   private static TextRecognizer textRecognizer = null;
+  public static String versionTess4J = "4.4.0";
+  public static String versionTesseract = "4.1.0";
+
   private TextRecognizer() {
     Finder.Finder2.init();
   }
@@ -47,14 +45,17 @@ public class TextRecognizer {
 
   private int actualDPI = 72;
   public float optimumDPI = 300;
+
   private float factor() {
     return optimumDPI / actualDPI;
   }
 
   private Tesseract1 tess = null;
+
   public static TextRecognizer start() {
     if (textRecognizer == null) {
       textRecognizer = new TextRecognizer();
+      Debug.log(lvl, "TextRecognizer: start: Tess4J %s using Tesseract %s", versionTess4J, versionTesseract);
       try {
         textRecognizer.tess = new Tesseract1();
         boolean tessdataOK = extractTessdata();
@@ -73,10 +74,24 @@ public class TextRecognizer {
       } catch (Exception e) {
         textRecognizer = null;
         Debug.error("TextRecognizer: start: %s", e.getMessage());
+      } catch (UnsatisfiedLinkError e) {
+        textRecognizer = null;
+        String libName = RunTime.get().runningMac ? "libtesseract.dylib" : "libtesseract.so";
+        Debug.error("TextRecognizer: start: Tesseract library not found (%s version %s)", libName, versionTesseract);
+        String helpURL = "https://github.com/RaiMan/SikuliX1/wiki/macOS-Linux:-Support-libraries-for-Tess4J-Tesseract-4-OCR";
+        if (RunTime.isIDE()) {
+          Debug.error("Save your work, correct the problem and restart the IDE!");
+          try {
+            Desktop.getDesktop().browse(new URI(helpURL));
+          } catch (IOException ex) {
+          } catch (URISyntaxException ex) {
+          }
+        }
+        Debug.error("see: " + helpURL);
       }
     }
     if (null == textRecognizer) {
-      RunTime.get().terminate(999, "fatal: TextRecognizer could not be initialized");
+      RunTime.get().terminate(999, "TextRecognizer could not be initialized");
     }
     textRecognizer.setLanguage(textRecognizer.language);
     return textRecognizer;
@@ -124,10 +139,11 @@ public class TextRecognizer {
 
   /**
    * OCR Engine modes:
-   *   0    Original Tesseract only.
-   *   1    Cube only.
-   *   2    Tesseract + cube.
-   *   3    Default, based on what is available.
+   * 0    Original Tesseract only.
+   * 1    Cube only.
+   * 2    Tesseract + cube.
+   * 3    Default, based on what is available.
+   *
    * @param oem
    * @return
    */
@@ -145,20 +161,21 @@ public class TextRecognizer {
 
   /**
    * Page segmentation modes:
-   *   0    Orientation and script detection (OSD) only.
-   *   1    Automatic page segmentation with OSD.
-   *   2    Automatic page segmentation, but no OSD, or OCR.
-   *   3    Fully automatic page segmentation, but no OSD. (Default)
-   *   4    Assume a single column of text of variable sizes.
-   *   5    Assume a single uniform block of vertically aligned text.
-   *   6    Assume a single uniform block of text.
-   *   7    Treat the image as a single text line.
-   *   8    Treat the image as a single word.
-   *   9    Treat the image as a single word in a circle.
-   *  10    Treat the image as a single character.
-   *  11    Sparse text. Find as much text as possible in no particular order.
-   *  12    Sparse text with OSD.
-   *  13    Raw line. Treat the image as a single text line, bypassing hacks that are Tesseract-specific.
+   * 0    Orientation and script detection (OSD) only.
+   * 1    Automatic page segmentation with OSD.
+   * 2    Automatic page segmentation, but no OSD, or OCR.
+   * 3    Fully automatic page segmentation, but no OSD. (Default)
+   * 4    Assume a single column of text of variable sizes.
+   * 5    Assume a single uniform block of vertically aligned text.
+   * 6    Assume a single uniform block of text.
+   * 7    Treat the image as a single text line.
+   * 8    Treat the image as a single word.
+   * 9    Treat the image as a single word in a circle.
+   * 10    Treat the image as a single character.
+   * 11    Sparse text. Find as much text as possible in no particular order.
+   * 12    Sparse text with OSD.
+   * 13    Raw line. Treat the image as a single text line, bypassing hacks that are Tesseract-specific.
+   *
    * @param psm
    * @return the textRecognizer instance
    */
@@ -181,7 +198,7 @@ public class TextRecognizer {
           dataPath = newDataPath;
           tess.setDatapath(dataPath);
         } else {
-          Debug.error("TextRecognizer: setDataPath: not valid - no %s.traineddata (%s)",language, newDataPath);
+          Debug.error("TextRecognizer: setDataPath: not valid - no %s.traineddata (%s)", language, newDataPath);
         }
       }
     }
@@ -250,7 +267,7 @@ public class TextRecognizer {
       int newH = (int) (rFactor * bimg.getHeight());
       resizedBimg = ImageHelper.getScaledInstance(bimg, newW, newH);
     }
-    return  resizedBimg;
+    return resizedBimg;
   }
 
   public Region rescale(Rectangle rect) {
@@ -277,6 +294,7 @@ public class TextRecognizer {
 
   /**
    * use start() instead
+   *
    * @return
    */
   @Deprecated
@@ -293,9 +311,9 @@ public class TextRecognizer {
    */
   @Deprecated
   public static void reset() {
-		textRecognizer = null;
-		start();
-	}
+    textRecognizer = null;
+    start();
+  }
 
   /**
    * no longer needed - use start() and setXXX()
@@ -308,6 +326,7 @@ public class TextRecognizer {
 
   /**
    * deprecated use doOCR() instead
+   *
    * @param simg
    * @return text
    */
@@ -319,6 +338,7 @@ public class TextRecognizer {
 
   /**
    * deprecated use doOCR() instead
+   *
    * @param bimg
    * @return text
    */
